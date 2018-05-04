@@ -15,11 +15,11 @@ float uiPosX = -450;
 //stores the playback rate when hitting pause with space
 float store = 20;
 // how many units to step per second
-float cameraStep = 70;
+float cameraStep = 90;
 // our current z position for the camera
 float cameraPosZ = 0;
 // how far apart the spectra are so we can loop the camera back
-float spectraSpacing = 1;
+float spectraSpacing = 2;
 //amount of rendered lines
 int amountOfDetails = 1; 
 //used for scrolling
@@ -27,9 +27,11 @@ boolean shift;
 //strongest frequency in the song
 float maxAmplitude = 0;
 //start threshold
-int threshold = 2;
-//length of animation
-float lengthInMs;
+int threshold = 1;
+//length of song
+float lengthOfSongInMs;
+//allowed time to play for animation
+float lengthOfAnimInMs;
 
 
 void setup()
@@ -62,7 +64,7 @@ void analyzeUsingAudioRecordingStream()
 
   // figure out how many samples are in the stream so we can allocate the correct number of spectra
   int totalSamples = int( (stream.getMillisecondLength() / 1000.0) * stream.getFormat().getSampleRate() );
-  lengthInMs = stream.getMillisecondLength();
+  lengthOfSongInMs = stream.getMillisecondLength();
   println("sampleRate:" + stream.getFormat().getSampleRate() );
   println("stream in Seconds: " + stream.getMillisecondLength() / 1000.0 );
 
@@ -90,81 +92,6 @@ void analyzeUsingAudioRecordingStream()
     {
       spectra[chunkIdx][i] = fft.getBand(i);
     }
-  }
-}
-
-
-
-void mouseWheel(MouseEvent event) {   
-  
-  if(shift){
-    camPosZ -= 5* event.getCount();
-    if(camPosY >= 10){camPosY += 5* event.getCount();}else{camPosY = 10;}
-  }else{
-    camPosX += 5* event.getCount();
-  }
-}
-
-void keyPressed(){
- if(key == CODED){
-   if(keyCode == SHIFT){
-     shift = true;
-   }
- }
-}
-
-void mouseClicked() {
-  println("mouseClicked");
-}
-
-void keyReleased() {
-  if (key == ' ') {
-    togglePlayback();
-  }
-  if (key == '+') {
-    cameraStep += 10;
-  }
-  if (key == '-') {
-    cameraStep -= 10;
-  }
-
-  if (key == 'q') {
-    if (threshold >= 1)  threshold--;
-  }
-
-  if (key == 'e') {
-    threshold++;
-  }
-
-  if (key == CODED) {
-    if (keyCode == UP) {
-      amountOfDetails += 1;
-    }
-    if (keyCode == DOWN) {
-      if (amountOfDetails > 1) {     
-        amountOfDetails -= 1;
-      }
-    }
-    if (keyCode == RIGHT) {
-      spectraSpacing += 1;
-    }
-    if (keyCode == LEFT) {
-      if (spectraSpacing > 1) {     
-        spectraSpacing -= 1;
-      }
-    }
-    if(keyCode == SHIFT){
-     shift = false; 
-    }
-  }
-}
-
-void togglePlayback() {  
-  if (cameraStep > 0 || cameraStep < 0) {
-    store = cameraStep;
-    cameraStep = 0;
-  } else {
-    cameraStep = store;
   }
 }
 
@@ -233,7 +160,9 @@ void draw()
 
       for (int i = 0; i < (spectra[s].length/2)-1; i++ )
       {
+        //filter out frequencies without enough energy
         if (spectra[s][i] > threshold) {
+          //color the frequencies according to their energy and fade them out
           stroke(255*fade, (int)spectra[s][i]*5, 255*fade);
           line(-256 + i, spectra[s][i], z, -256 + (i+1), spectra[s][i+1], z);
           if (spectra[s][i] > maxAmplitude) {
@@ -245,4 +174,84 @@ void draw()
   }
 
   camera( camPosX, camPosY, camPosZ + cameraPosZ, -256, 0, cameraPosZ+150, 0, -1, 0 );
+}
+
+
+//****************INPUT******************
+
+
+void mouseWheel(MouseEvent event) {   
+  
+  if(shift){
+    camPosZ -= 5* event.getCount();
+    if(camPosY >= 10){camPosY += 5* event.getCount();}else{camPosY = 10;}
+  }else{
+    camPosX += 5* event.getCount();
+  }
+}
+
+void keyPressed(){
+ if(key == CODED){
+   if(keyCode == SHIFT){
+     shift = true;
+   }
+ }
+}
+
+void mouseClicked() {
+  
+}
+
+void keyReleased() {
+  if (key == ' ') {
+    togglePlayback();
+  }
+  if (key == '+') {
+    cameraStep += 10;
+  }
+  if (key == '-') {
+    cameraStep -= 10;
+  }
+
+  if (key == 'q') {
+    if (threshold >= 1)  threshold--;
+  }
+
+  if (key == 'e') {
+    threshold++;
+  }
+
+  if (key == CODED) {
+    if (keyCode == UP) {
+      amountOfDetails += 1;
+    }
+    if (keyCode == DOWN) {
+      if (amountOfDetails > 1) {     
+        amountOfDetails -= 1;
+      }
+    }
+    if (keyCode == RIGHT) {
+      spectraSpacing += 1;
+    }
+    if (keyCode == LEFT) {
+      if (spectraSpacing > 1) {     
+        spectraSpacing -= 1;
+      }
+    }
+    if(keyCode == SHIFT){
+     shift = false; 
+    }
+  }
+}
+
+
+void togglePlayback() {  
+  if (cameraStep > 0 || cameraStep < 0) {
+    store = cameraStep;
+     player.pause();
+    cameraStep = 0;
+  } else {
+    cameraStep = store;
+    player.play();
+  }
 }
