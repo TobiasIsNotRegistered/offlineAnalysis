@@ -8,18 +8,18 @@ AudioPlayer player;
 
 float camPosX = 0;
 float camPosY = 100;
-float camPosZ = -200;
+float camPosZ = -400;
 float uiPosY = -100;
 float uiPosX = -450;
 
 //stores the playback rate when hitting pause with space
-float store = 20;
+float cameraStepStore = 20;
 // how many units to step per second
 float cameraStep = 90;
 // our current z position for the camera
-float cameraPosZ = 0;
+float cameraPosZ = -0;
 // how far apart the spectra are so we can loop the camera back
-float spectraSpacing = 2;
+float spectraSpacing = 1;
 //amount of rendered lines
 int amountOfDetails = 1; 
 //used for scrolling
@@ -28,30 +28,39 @@ boolean shift;
 float maxAmplitude = 0;
 //start threshold
 int threshold = 1;
-//length of song
-float lengthOfSongInMs;
-//allowed time to play for animation
-float lengthOfAnimInMs;
+//filechoosing
+boolean fileChosen;
 
+int startFrom;
 
 void setup()
 {
   size(1200, 600, P3D);
   //anti-aliasing, either: 2,4,8/16
   smooth(0);
-  frameRate(30);
-
+  frameRate(60);
+  startFrom = 0;
   minim = new Minim(this);
-  analyzeUsingAudioRecordingStream();
-  player = minim.loadFile("shindig.mp3");
-  player.play();
+  fileChosen =  false;
+  selectInput("Select a file to process:", "fileSelected");
 }
 
+void fileSelected(File selection) {
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+  } else {
+    println("User selected " + selection.getAbsolutePath());    
+    player = minim.loadFile(selection.getAbsolutePath());
+    analyzeUsingAudioRecordingStream(selection.getAbsolutePath());
+    fileChosen = true;
+    player.play(startFrom);
+  }
+}
 
-void analyzeUsingAudioRecordingStream()
+void analyzeUsingAudioRecordingStream(String path)
 {
   int fftSize = 1024; //bufferSize
-  AudioRecordingStream stream = minim.loadFileStream("shindig.mp3", fftSize, false);
+  AudioRecordingStream stream = minim.loadFileStream(path, fftSize, false);
 
   // tell it to "play" so we can read from it.
   stream.play();
@@ -64,7 +73,6 @@ void analyzeUsingAudioRecordingStream()
 
   // figure out how many samples are in the stream so we can allocate the correct number of spectra
   int totalSamples = int( (stream.getMillisecondLength() / 1000.0) * stream.getFormat().getSampleRate() );
-  lengthOfSongInMs = stream.getMillisecondLength();
   println("sampleRate:" + stream.getFormat().getSampleRate() );
   println("stream in Seconds: " + stream.getMillisecondLength() / 1000.0 );
 
@@ -72,6 +80,8 @@ void analyzeUsingAudioRecordingStream()
   int totalChunks = (totalSamples / fftSize) + 1;
   println("Analyzing " + totalSamples + " samples for total of " + totalChunks + " chunks.");
 
+  //sync the distance per second to the speed of the song
+  cameraStep = 1 / ((stream.getMillisecondLength() / 1000.0) / totalChunks);
   // allocate a 2-dimentional array that will hold all of the spectrum data for all of the chunks.
   // the second dimension if fftSize/2 because the spectrum size is always half the number of samples analyzed.
   spectra = new float[totalChunks][fftSize/2];
@@ -116,64 +126,62 @@ void displayUI(float cameraPos) {
 }
 
 void drawXYZAxis() {
+  int z = 35;
   stroke(255, 255, 255);
   //z-axis
-  line(-256, 0, cameraPosZ, -256, 0, spectra.length);
+  //line(-256, 0, cameraPosZ-z, -256, 0, spectra.length);
   //y-axis
-  line(-256, 0, cameraPosZ, -256, 100, cameraPosZ);
+  //line(-256, 0, cameraPosZ-z, -256, 100, cameraPosZ-z);
   //x-axis
-  line(-256, 0, cameraPosZ, 0, 0, cameraPosZ);
+  line(-256, 0, cameraPosZ-z, 0, 0, cameraPosZ-z);
 }
 
-
+float dt = 1.0 / frameRate; 
+float stepSize = cameraStep * dt;
 
 void draw()
-{
-  
-  float dt = 1.0 / frameRate;  
-  cameraPosZ += cameraStep * dt;  
-
-  // jump back to start position when we get to the end
-  if ( cameraPosZ > spectra.length * spectraSpacing )
-  {
-    cameraPosZ = 0;
-  }
-
-  background(0);  
+{  
+  if (fileChosen) {
+  //move the camera forward
+  //cameraPosZ +=  stepSize;
+  cameraPosZ = (player.position() * cameraStep) / 1000;
+  background(0, 0.1);  
   float camNear = cameraPosZ - 1000;
-  float camFar  = cameraPosZ + 2000;
-  float camFadeStart = lerp(camNear, camFar, 0.01f);
+  float camFar  = cameraPosZ;
+  float camFadeStart = lerp(camNear, camFar, 0.80f);
 
   //for programming
-  drawXYZAxis(); 
-  displayUI(cameraPosZ);
-
-  // render the spectra going back into the screen
-  for (int s = 0; s < spectra.length; s+=amountOfDetails)
-  {
-    float z = s * spectraSpacing;
-
-    // don't draw spectra that are behind the camera or too far away
-    if ( z > camNear && z < camFar )
+  //drawXYZAxis(); 
+  //displayUI(cameraPosZ);
+  
+  
+    // render the spectra going back into the screen
+    for (int s = 0; s < spectra.length; s+=amountOfDetails)
     {
-      float fade = z < camFadeStart ? 1 : map(z, camFadeStart, camFar, 1, 0);
+      float z = s * spectraSpacing;
 
-      for (int i = 0; i < (spectra[s].length/2)-1; i++ )
+      // don't draw spectra that are behind the camera or too far away
+      if ( z > camNear && z < camFar )
       {
-        //filter out frequencies without enough energy
-        if (spectra[s][i] > threshold) {
-          //color the frequencies according to their energy and fade them out
-          stroke(255*fade, (int)spectra[s][i]*5, 255*fade);
-          line(-256 + i, spectra[s][i], z, -256 + (i+1), spectra[s][i+1], z);
-          if (spectra[s][i] > maxAmplitude) {
-            maxAmplitude = spectra[s][i];
+        float fade = z < camFadeStart ? 1 : map(z, camFadeStart, camFar, 1, 0);
+
+        for (int i = ((spectra[s].length/2)-1); i > 5; i-- )
+        {
+          //filter out frequencies without enough energy
+          if (spectra[s][i] > threshold) {
+            //color the frequencies according to their energy and fade them out
+            stroke(255*fade, (int)spectra[s][i], 0);
+            line((i*5)-256, 0, z, (i*5)-256, spectra[s][i], z);
+            if (spectra[s][i] > maxAmplitude) {
+              maxAmplitude = spectra[s][i];
+            }
           }
         }
       }
     }
   }
 
-  camera( camPosX, camPosY, camPosZ + cameraPosZ, -256, 0, cameraPosZ+150, 0, -1, 0 );
+  camera( camPosX, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
 }
 
 
@@ -181,25 +189,28 @@ void draw()
 
 
 void mouseWheel(MouseEvent event) {   
-  
-  if(shift){
+
+  if (shift) {
     camPosZ -= 5* event.getCount();
-    if(camPosY >= 10){camPosY += 5* event.getCount();}else{camPosY = 10;}
-  }else{
+    if (camPosY >= 10) {
+      camPosY += 5* event.getCount();
+    } else {
+      camPosY = 10;
+    }
+  } else {
     camPosX += 5* event.getCount();
   }
 }
 
-void keyPressed(){
- if(key == CODED){
-   if(keyCode == SHIFT){
-     shift = true;
-   }
- }
+void keyPressed() {
+  if (key == CODED) {
+    if (keyCode == SHIFT) {
+      shift = true;
+    }
+  }
 }
 
 void mouseClicked() {
-  
 }
 
 void keyReleased() {
@@ -231,15 +242,15 @@ void keyReleased() {
       }
     }
     if (keyCode == RIGHT) {
-      spectraSpacing += 1;
+      //spectraSpacing += 1;
     }
     if (keyCode == LEFT) {
       if (spectraSpacing > 1) {     
-        spectraSpacing -= 1;
+        //spectraSpacing -= 1;
       }
     }
-    if(keyCode == SHIFT){
-     shift = false; 
+    if (keyCode == SHIFT) {
+      shift = false;
     }
   }
 }
@@ -247,11 +258,11 @@ void keyReleased() {
 
 void togglePlayback() {  
   if (cameraStep > 0 || cameraStep < 0) {
-    store = cameraStep;
-     player.pause();
+    cameraStepStore = cameraStep;
+    player.pause();
     cameraStep = 0;
   } else {
-    cameraStep = store;
+    cameraStep = cameraStepStore;
     player.play();
   }
 }
