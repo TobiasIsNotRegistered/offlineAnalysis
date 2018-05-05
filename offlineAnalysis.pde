@@ -142,19 +142,19 @@ float stepSize = cameraStep * dt;
 void draw()
 {  
   if (fileChosen) {
-  //move the camera forward
-  //cameraPosZ +=  stepSize;
-  cameraPosZ = (player.position() * cameraStep) / 1000;
-  background(0, 0.1);  
-  float camNear = cameraPosZ - 1000;
-  float camFar  = cameraPosZ;
-  float camFadeStart = lerp(camNear, camFar, 0.80f);
+    //move the camera forward
+    //cameraPosZ +=  stepSize;
+    cameraPosZ = (player.position() * cameraStep) / 1000;
+    background(0, 0.1);  
+    float camNear = cameraPosZ - 1000;
+    float camFar  = cameraPosZ;
+    float camFadeStart = lerp(camNear, camFar, 0.80f);
 
-  //for programming
-  //drawXYZAxis(); 
-  //displayUI(cameraPosZ);
-  
-  
+    //for programming
+    //drawXYZAxis(); 
+    //displayUI(cameraPosZ);
+
+
     // render the spectra going back into the screen
     for (int s = 0; s < spectra.length; s+=amountOfDetails)
     {
@@ -165,12 +165,13 @@ void draw()
       {
         float fade = z < camFadeStart ? 1 : map(z, camFadeStart, camFar, 1, 0);
 
-        for (int i = ((spectra[s].length/2)-1); i > 5; i-- )
+        for (int i = ((spectra[s].length/2)-1); i > 0; i-- )
         {
           //filter out frequencies without enough energy
           if (spectra[s][i] > threshold) {
             //color the frequencies according to their energy and fade them out
             stroke(255*fade, (int)spectra[s][i], 0);
+            strokeWeight((spectra[s][i] / 10) < 1 ? 1 : (spectra[s][i] / 10));
             line((i*5)-256, 0, z, (i*5)-256, spectra[s][i], z);
             if (spectra[s][i] > maxAmplitude) {
               maxAmplitude = spectra[s][i];
@@ -181,7 +182,7 @@ void draw()
     }
   }
 
-  camera( camPosX, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
+  camera( camPosX+300, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
 }
 
 
@@ -218,10 +219,10 @@ void keyReleased() {
     togglePlayback();
   }
   if (key == '+') {
-    cameraStep += 10;
+    player.skip(5000);
   }
   if (key == '-') {
-    cameraStep -= 10;
+    player.skip(-5000);
   }
 
   if (key == 'q') {
