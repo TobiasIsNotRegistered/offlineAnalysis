@@ -5,6 +5,7 @@ import ddf.minim.spi.*;
 Minim minim;
 float[][] spectra;
 AudioPlayer player;
+int fftSize;
 
 float camPosX = 0;
 float camPosY = 200;
@@ -62,7 +63,7 @@ void fileSelected(File selection) {
 void analyzeUsingAudioRecordingStream(String path)
 {
   //amount of bands
-  int fftSize = 4096; 
+  fftSize = 1024; 
   AudioRecordingStream stream = minim.loadFileStream(path, fftSize, false);
 
   // tell it to "play" so we can read from it.
@@ -187,7 +188,11 @@ void draw()
             //strokeWeight(20 / maxAmplitude * spectra[s][i]);
             line((i*5), 0, z, (i*5), (100/maxAmplitude * spectra[s][i]), z);            
           }
-          
+          if(s%100 == 0 && i%100 == 0){
+            rotateX(PI);
+            text(i * (20000/fftSize) + "hz", i*5, 0, -z);
+            rotateX(PI);
+          }
         }
       }
     }
