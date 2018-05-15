@@ -7,7 +7,7 @@ float[][] spectra;
 AudioPlayer player;
 
 float camPosX = 0;
-float camPosY = 100;
+float camPosY = 200;
 float camPosZ = -400;
 float uiPosY = -100;
 float uiPosX = -450;
@@ -27,11 +27,14 @@ boolean shift;
 //strongest frequency in the song
 float maxAmplitude = 0;
 //start threshold
-int threshold = 1;
+int threshold = 5;
 //filechoosing
 boolean fileChosen;
+//amount of space between bands on x-axis (declines for logarithmic scaling)
+int spacingX;
 
 int startFrom;
+int amountOfDisplayedBands;
 
 void setup()
 {
@@ -48,8 +51,7 @@ void setup()
 void fileSelected(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
-  } else {
-    println("User selected " + selection.getAbsolutePath());    
+  } else {    
     player = minim.loadFile(selection.getAbsolutePath());
     analyzeUsingAudioRecordingStream(selection.getAbsolutePath());
     fileChosen = true;
@@ -59,7 +61,8 @@ void fileSelected(File selection) {
 
 void analyzeUsingAudioRecordingStream(String path)
 {
-  int fftSize = 1024; //bufferSize
+  //amount of bands
+  int fftSize = 4096; 
   AudioRecordingStream stream = minim.loadFileStream(path, fftSize, false);
 
   // tell it to "play" so we can read from it.
@@ -78,7 +81,7 @@ void analyzeUsingAudioRecordingStream(String path)
 
   // now we'll analyze the samples in chunks
   int totalChunks = (totalSamples / fftSize) + 1;
-  println("Analyzing " + totalSamples + " samples for total of " + totalChunks + " chunks.");
+  println("Analyzing... " + totalSamples + " samples for total of " + totalChunks + " chunks.");
 
   //sync the distance per second to the speed of the song
   cameraStep = 1 / ((stream.getMillisecondLength() / 1000.0) / totalChunks);
@@ -101,8 +104,15 @@ void analyzeUsingAudioRecordingStream(String path)
     for (int i = 0; i < fftSize/2; ++i)
     {
       spectra[chunkIdx][i] = fft.getBand(i);
+      if (spectra[chunkIdx][i] > maxAmplitude) {
+        maxAmplitude = spectra[chunkIdx][i];
+      }
     }
   }
+  amountOfDisplayedBands = (int)((spectra[0].length/2));
+  camPosX = amountOfDisplayedBands/2*5;
+  println("maxAmplitude: " + maxAmplitude + " | amountOfDisplayedBands: " + amountOfDisplayedBands);
+  println("loading complete, playing...");
 }
 
 void displayUI(float cameraPos) {
@@ -136,8 +146,10 @@ void drawXYZAxis() {
   line(-256, 0, cameraPosZ-z, 0, 0, cameraPosZ-z);
 }
 
-float dt = 1.0 / frameRate; 
-float stepSize = cameraStep * dt;
+void drawUI(){  
+  
+  
+}
 
 void draw()
 {  
@@ -148,7 +160,7 @@ void draw()
     background(0, 0.1);  
     float camNear = cameraPosZ - 1000;
     float camFar  = cameraPosZ;
-    float camFadeStart = lerp(camNear, camFar, 0.80f);
+    //float camFadeStart = lerp(camNear, camFar, 0.10f);
 
     //for programming
     //drawXYZAxis(); 
@@ -159,35 +171,39 @@ void draw()
     for (int s = 0; s < spectra.length; s+=amountOfDetails)
     {
       float z = s * spectraSpacing;
-
+      
       // don't draw spectra that are behind the camera or too far away
       if ( z > camNear && z < camFar )
       {
-        float fade = z < camFadeStart ? 1 : map(z, camFadeStart, camFar, 1, 0);
-
-        for (int i = ((spectra[s].length/2)-1); i > 0; i-- )
+        //float fade = z < camFadeStart ? 1 : map(z, camFadeStart, camFar, 1, 0);
+        spacingX = 10;
+        
+        for (int i = 0; i < amountOfDisplayedBands; i++ )
         {
           //filter out frequencies without enough energy
           if (spectra[s][i] > threshold) {
             //color the frequencies according to their energy and fade them out
-            stroke(255*fade, (int)spectra[s][i], 0);
-            strokeWeight((spectra[s][i] / 10) < 1 ? 1 : (spectra[s][i] / 10));
-            line((i*5)-256, 0, z, (i*5)-256, spectra[s][i], z);
-            if (spectra[s][i] > maxAmplitude) {
-              maxAmplitude = spectra[s][i];
-            }
+            stroke(255-(int)spectra[s][i], 5*spectra[s][i], 0);
+            //strokeWeight(20 / maxAmplitude * spectra[s][i]);
+            line((i*5), 0, z, (i*5), (100/maxAmplitude * spectra[s][i]), z);            
           }
+          
         }
       }
     }
   }
-
-  camera( camPosX+300, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
+  cameraWobble();
+  camera(camPosX, camPosY, camPosZ + cameraPosZ, 300, 0, cameraPosZ+150, 0, -1, 0 );
 }
 
 
 //****************INPUT******************
-
+int step = 1;
+void cameraWobble(){
+  if(camPosX > 1000)step = -1;
+  if(camPosX < -100)step = 1;
+  camPosX += step;
+}
 
 void mouseWheel(MouseEvent event) {   
 
