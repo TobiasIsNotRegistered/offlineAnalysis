@@ -4,6 +4,7 @@ import ddf.minim.spi.*;
 
 Minim minim;
 float[][] spectra;
+float[][] newSpectra;
 AudioPlayer player;
 int fftSize;
 
@@ -33,17 +34,16 @@ int threshold = 5;
 boolean fileChosen;
 //amount of space between bands on x-axis (declines for logarithmic scaling)
 int spacingX;
-
-int startFrom;
 int amountOfDisplayedBands;
 
 void setup()
 {
+  surface.setResizable(true);
   size(1200, 600, P3D);
   //anti-aliasing, either: 2,4,8/16
+
   smooth(0);
   frameRate(60);
-  startFrom = 0;
   minim = new Minim(this);
   fileChosen =  false;
   selectInput("Select a file to process:", "fileSelected");
@@ -56,7 +56,7 @@ void fileSelected(File selection) {
     player = minim.loadFile(selection.getAbsolutePath());
     analyzeUsingAudioRecordingStream(selection.getAbsolutePath());
     fileChosen = true;
-    player.play(startFrom);
+    player.play(0);
   }
 }
 
@@ -89,6 +89,7 @@ void analyzeUsingAudioRecordingStream(String path)
   // allocate a 2-dimentional array that will hold all of the spectrum data for all of the chunks.
   // the second dimension if fftSize/2 because the spectrum size is always half the number of samples analyzed.
   spectra = new float[totalChunks][fftSize/2];
+  newSpectra = new float[totalChunks][10];
 
   for (int chunkIdx = 0; chunkIdx < totalChunks; ++chunkIdx)
   {
@@ -100,57 +101,50 @@ void analyzeUsingAudioRecordingStream(String path)
     // now analyze the left channel
     fft.forward( buffer.getChannel(0) );
 
-    // and copy the resulting spectrum into our spectra array
-    //println("  Copying...");
-    for (int i = 0; i < fftSize/2; ++i)
-    {
-      spectra[chunkIdx][i] = fft.getBand(i);
-      if (spectra[chunkIdx][i] > maxAmplitude) {
-        maxAmplitude = spectra[chunkIdx][i];
-      }
-    }
+    //copy the resulting spectrum into our spectra array
+    //linearCopy: each band is represented
+    //linearCopy(chunkIdx, fft);
+    //exponentialCopy: bands are added together
+    exponentialCopy(chunkIdx, fft);    
   }
-  amountOfDisplayedBands = (int)((spectra[0].length/2));
-  camPosX = amountOfDisplayedBands/2*5;
+  amountOfDisplayedBands = fftSize/2;
+  //for exponentialCopy
+  spectra = newSpectra;
+  amountOfDisplayedBands = 10;
   println("maxAmplitude: " + maxAmplitude + " | amountOfDisplayedBands: " + amountOfDisplayedBands);
   println("loading complete, playing...");
 }
 
-void displayUI(float cameraPos) {
-  fill(255, 0, 0);
-  rotateX(PI);
-  textSize(12);
-  text("frameRate: " + frameRate, uiPosX, uiPosY, cameraPos*-1);
-  text("cameraStep: " + cameraStep, uiPosX, uiPosY+10, cameraPos*-1);
-  text("max. Amp.: " + maxAmplitude, uiPosX, uiPosY+20, cameraPos*-1);
-  text("render every: " + amountOfDetails + " line", uiPosX, uiPosY+30, cameraPos*-1);
-  text("spacing of lines: " + spectraSpacing, uiPosX, uiPosY+40, cameraPos*-1);
-  text("threshold: " + threshold, uiPosX, uiPosY+50, cameraPos*-1);
-
-  fill(0, 255, 0);
-  textSize(12);
-  text("UP/DOWN: amount of rendered lines", uiPosX, uiPosY, (cameraPos*-1)- 150);
-  text("LEFT/RIGHT: spacing", uiPosX, uiPosY+10, (cameraPos*-1)- 150);
-  text("+ / - : speed of animation", uiPosX, uiPosY+20, (cameraPos*-1)- 150);
-  text("q / e: threshold up/down", uiPosX, uiPosY+30, (cameraPos*-1)- 150);
-  rotateX(PI);
+void linearCopy(int chunkIdx, FFT fft) {
+  for (int i = 0; i < fftSize/2; ++i)
+  {
+    spectra[chunkIdx][i] = fft.getBand(i);
+    if (spectra[chunkIdx][i] > maxAmplitude) {
+      maxAmplitude = spectra[chunkIdx][i];
+    }
+  }
 }
 
-void drawXYZAxis() {
-  int z = 35;
-  stroke(255, 255, 255);
-  //z-axis
-  //line(-256, 0, cameraPosZ-z, -256, 0, spectra.length);
-  //y-axis
-  //line(-256, 0, cameraPosZ-z, -256, 100, cameraPosZ-z);
-  //x-axis
-  line(-256, 0, cameraPosZ-z, 0, 0, cameraPosZ-z);
+int upper = fftSize/2;
+int lower = upper/2;
+int currentBand = 9;
+void exponentialCopy(int chunkIdx, FFT fft) { 
+  linearCopy(chunkIdx, fft);
+
+  while (currentBand>0) {
+    println("currentBand: " + currentBand);
+    println("upper" + upper);
+    println("lower" + lower);
+    for (int j = upper; j >= lower; j--) {  
+      println("j: " + j);
+      newSpectra[chunkIdx][currentBand] += spectra[chunkIdx][j];
+    }
+    upper = lower;
+    lower /= 2;
+    currentBand--;
+  }
 }
 
-void drawUI(){  
-  
-  
-}
 
 void draw()
 {  
@@ -159,7 +153,7 @@ void draw()
     //cameraPosZ +=  stepSize;
     cameraPosZ = (player.position() * cameraStep) / 1000;
     background(0, 0.1);  
-    float camNear = cameraPosZ - 1000;
+    float camNear = cameraPosZ -250;
     float camFar  = cameraPosZ;
     //float camFadeStart = lerp(camNear, camFar, 0.10f);
 
@@ -172,23 +166,24 @@ void draw()
     for (int s = 0; s < spectra.length; s+=amountOfDetails)
     {
       float z = s * spectraSpacing;
-      
+
       // don't draw spectra that are behind the camera or too far away
       if ( z > camNear && z < camFar )
       {
         //float fade = z < camFadeStart ? 1 : map(z, camFadeStart, camFar, 1, 0);
         spacingX = 10;
-        
+
         for (int i = 0; i < amountOfDisplayedBands; i++ )
         {
           //filter out frequencies without enough energy
           if (spectra[s][i] > threshold) {
             //color the frequencies according to their energy and fade them out
             stroke(255-(int)spectra[s][i], 5*spectra[s][i], 0);
-            //strokeWeight(20 / maxAmplitude * spectra[s][i]);
-            line((i*5), 0, z, (i*5), (100/maxAmplitude * spectra[s][i]), z);            
+            //space the lines with factor 5, start from y=0 and draw up to a maximum of 100, which equals maxAmplitude
+            line((i*5), 0, z, (i*5), (100/maxAmplitude * spectra[s][i]), z);
           }
-          if(s%100 == 0 && i%100 == 0){
+          //display the respective hz every 100th sample
+          if (z%100 == 0 && i%100 == 0) {
             rotateX(PI);
             text(i * (20000/fftSize) + "hz", i*5, 0, -z);
             rotateX(PI);
@@ -197,16 +192,16 @@ void draw()
       }
     }
   }
-  cameraWobble();
-  camera(camPosX, camPosY, camPosZ + cameraPosZ, 300, 0, cameraPosZ+150, 0, -1, 0 );
+  //cameraWobble();
+  camera(camPosX, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
 }
 
 
 //****************INPUT******************
 int step = 1;
-void cameraWobble(){
-  if(camPosX > 1000)step = -1;
-  if(camPosX < -100)step = 1;
+void cameraWobble() {
+  if (camPosX > 1000)step = -1;
+  if (camPosX < -100)step = 1;
   camPosX += step;
 }
 
@@ -287,4 +282,24 @@ void togglePlayback() {
     cameraStep = cameraStepStore;
     player.play();
   }
+}
+
+void displayUI(float cameraPos) {
+  fill(255, 0, 0);
+  rotateX(PI);
+  textSize(12);
+  text("frameRate: " + frameRate, uiPosX, uiPosY, cameraPos*-1);
+  text("cameraStep: " + cameraStep, uiPosX, uiPosY+10, cameraPos*-1);
+  text("max. Amp.: " + maxAmplitude, uiPosX, uiPosY+20, cameraPos*-1);
+  text("render every: " + amountOfDetails + " line", uiPosX, uiPosY+30, cameraPos*-1);
+  text("spacing of lines: " + spectraSpacing, uiPosX, uiPosY+40, cameraPos*-1);
+  text("threshold: " + threshold, uiPosX, uiPosY+50, cameraPos*-1);
+
+  fill(0, 255, 0);
+  textSize(12);
+  text("UP/DOWN: amount of rendered lines", uiPosX, uiPosY, (cameraPos*-1)- 150);
+  text("LEFT/RIGHT: spacing", uiPosX, uiPosY+10, (cameraPos*-1)- 150);
+  text("+ / - : speed of animation", uiPosX, uiPosY+20, (cameraPos*-1)- 150);
+  text("q / e: threshold up/down", uiPosX, uiPosY+30, (cameraPos*-1)- 150);
+  rotateX(PI);
 }
