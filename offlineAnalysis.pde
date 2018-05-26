@@ -43,6 +43,14 @@ class Analysis extends PApplet {
   float uiPosY = -100;
   float uiPosX = -450;
   
+  int fftSize;
+  String song;
+  
+  
+  public Analysis(String song, int fftSize) {
+    this.song = song;
+    this.fftSize = fftSize;
+  }
   
   public void settings() {
     size(1200, 600, "processing.opengl.PGraphics3D");
@@ -50,6 +58,8 @@ class Analysis extends PApplet {
   }
   
   void setup() {
+    
+    
   
     //anti-aliasing, either: 2,4,8/16
  
@@ -62,9 +72,7 @@ class Analysis extends PApplet {
   
   void analyzeUsingAudioRecordingStream()
   {
-    println(args[1]);
-    int fftSize = Integer.parseInt(args[1]); //distributes  frequencies into bands
-    AudioRecordingStream stream = minim.loadFileStream("Musik/"+args[0], fftSize, false);
+    AudioRecordingStream stream = minim.loadFileStream(song, fftSize, false);
   
     // tell it to "play" so we can read from it.
     stream.play();

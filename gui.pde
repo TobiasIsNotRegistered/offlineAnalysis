@@ -17,7 +17,9 @@
 public void startVisualization(GButton source, GEvent event) { //_CODE_:startVisualizationButton:687057:
   println("startVisualizationButton - GButton >> GEvent." + event + " @ " + millis());
   String[] args = {selectedFile.getName(), fftSizeInput.getText()};
-  Analysis sa = new Analysis();
+  println(args[0]);
+  println(args[1]);
+  Analysis sa = new Analysis(selectedFile.getAbsolutePath(), Integer.parseInt(args[1]));
   PApplet.runSketch(args, sa);
 } //_CODE_:startVisualizationButton:687057:
 
