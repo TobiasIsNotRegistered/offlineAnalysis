@@ -81,8 +81,8 @@ public void createGUI(){
   G4P.setGlobalColorScheme(GCScheme.BLUE_SCHEME);
   G4P.setCursor(ARROW);
   surface.setTitle("Frequency Distribution Analyzer");
-  fftSize = new GLabel(this, 10, 80, 80, 20);
-  fftSize.setText("FFT-Size");
+  fftSize = new GLabel(this, 10, 80, 120, 20);
+  fftSize.setText("FFT-Size(2^n)");
   fftSize.setOpaque(false);
   fftSizeInput = new GTextField(this, 100, 80, 230, 20, G4P.SCROLLBARS_NONE);
   fftSizeInput.setOpaque(true);
