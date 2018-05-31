@@ -13,13 +13,19 @@
  * Do not rename this tab!
  * =========================================================
  */
+ 
+ void fileSelected(File selection) {
+  selectedFile = selection;
+  songInput.setText(selection.getName());
+}
+
 
 public void startVisualization(GButton source, GEvent event) { //_CODE_:startVisualizationButton:687057:
   println("startVisualizationButton - GButton >> GEvent." + event + " @ " + millis());
   String[] args = {selectedFile.getName(), fftSizeInput.getText()};
   println(args[0]);
   println(args[1]);
-  Analysis sa = new Analysis(selectedFile.getAbsolutePath(), Integer.parseInt(args[1]));
+  Analysis sa = new Analysis(Integer.parseInt(args[1]));
   PApplet.runSketch(args, sa);
 } //_CODE_:startVisualizationButton:687057:
 

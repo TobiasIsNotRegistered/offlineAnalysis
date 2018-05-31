@@ -6,7 +6,7 @@ import g4p_controls.*;
 File selectedFile;
 
 void settings() {
-  size(350, 425, P2D);
+  size(350, 425, P3D);
 }
 
 void setup() {
@@ -16,10 +16,7 @@ void setup() {
 void draw() {
 };
 
-void fileSelected(File selection) {
-  selectedFile = selection;
-  songInput.setText(selection.getName());
-}
+
 
 
 class Analysis extends PApplet {
@@ -28,7 +25,6 @@ class Analysis extends PApplet {
   float[][] newSpectra;
   AudioPlayer player;
   int fftSize;
-  String song;
 
   float camPosX = 0;
   float camPosY = 200;
@@ -60,8 +56,7 @@ class Analysis extends PApplet {
   int amountOfDisplayedBands; 
 
 
-  public Analysis(String song, int fftSize) {
-    this.song = song;
+  public Analysis(int fftSize) {
     this.fftSize = fftSize;
   }
 
@@ -84,7 +79,6 @@ class Analysis extends PApplet {
   void analyzeUsingAudioRecordingStream(String path)
   {
     //amount of bands
-    fftSize = 1024; 
     AudioRecordingStream stream = minim.loadFileStream(path, fftSize, false);
 
     // tell it to "play" so we can read from it.
