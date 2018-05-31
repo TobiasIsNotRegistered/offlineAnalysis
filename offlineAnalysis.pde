@@ -67,18 +67,19 @@ class Analysis extends PApplet {
   }
 
   public void settings() {
-    size(1200, 600, "processing.opengl.PGraphics3D");
+    size(1200, 600, P3D);
     //anti-aliasing, either: 0,2,4,8/16
     smooth(0);
   }
 
   void setup()
   {
-    frameRate(60);
     minim = new Minim(this);
     player = minim.loadFile(selectedFile.getAbsolutePath());
     analyzeUsingAudioRecordingStream(selectedFile.getAbsolutePath());
     if(liveBool){player.play();}
+    frameRate(60);
+
   }
 
 
