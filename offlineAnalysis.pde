@@ -6,7 +6,7 @@ import g4p_controls.*;
 File selectedFile;
 
 void settings() {
-  size(350, 425, P3D);
+  size(350, 475, P3D);
 }
 
 void setup() {
@@ -16,9 +16,6 @@ void setup() {
 void draw() {
 };
 
-
-
-
 class Analysis extends PApplet {
   Minim minim;
   float[][] spectra;
@@ -27,6 +24,7 @@ class Analysis extends PApplet {
   int fftSize;
 
   float camPosX = 0;
+  float camPosXGoal = camPosX;
   float camPosY = 200;
   float camPosZ = -400;
   float uiPosY = -100;
@@ -56,8 +54,16 @@ class Analysis extends PApplet {
   int amountOfDisplayedBands; 
 
 
-  public Analysis(int fftSize) {
+  //from gui
+  boolean cameraWobbleBool;
+  boolean linearBool;
+  boolean liveBool;
+
+  public Analysis(int fftSize, boolean linear, boolean live, boolean cameraWobble) {
     this.fftSize = fftSize;
+    this.linearBool = linear;
+    this.liveBool = live;
+    this.cameraWobbleBool = cameraWobble;
   }
 
   public void settings() {
@@ -72,7 +78,7 @@ class Analysis extends PApplet {
     minim = new Minim(this);
     player = minim.loadFile(selectedFile.getAbsolutePath());
     analyzeUsingAudioRecordingStream(selectedFile.getAbsolutePath());
-    player.play();
+    if(liveBool){player.play();}
   }
 
 
@@ -167,15 +173,15 @@ class Analysis extends PApplet {
     //cameraPosZ +=  stepSize;
     cameraPosZ = (player.position() * cameraStep) / 1000;
     background(0, 0.1);  
-    float camNear = cameraPosZ -250;
-    float camFar  = cameraPosZ;
-    //float camFadeStart = lerp(camNear, camFar, 0.10f);
+    float camNear = cameraPosZ -600;
+    float camFar;
 
-    //for programming
-    //drawXYZAxis(); 
-    //displayUI(cameraPosZ);
-
-
+    if (liveBool) {
+      camFar  = cameraPosZ;
+    } else {
+      camFar  = cameraPosZ+2000;
+    }
+   
     // render the spectra going back into the screen
     for (int s = 0; s < spectra.length; s+=amountOfDetails)
     {
@@ -193,7 +199,7 @@ class Analysis extends PApplet {
           if (spectra[s][i] > threshold) {
             //color the frequencies according to their energy and fade them out
             stroke(255-(int)spectra[s][i], 5*spectra[s][i], 0);
-            //space the lines with factor 5, start from y=0 and draw up to a maximum of 100, which equals maxAmplitude
+            //space the lines with factor 5, start from y=0 and draw up to a maximum of 100, which equals maxAmplitude (normalisation)
             line((i*5), 0, z, (i*5), (100/maxAmplitude * spectra[s][i]), z);
           }
           //display the respective hz every 100th sample
@@ -206,8 +212,10 @@ class Analysis extends PApplet {
       }
     }
 
-    cameraWobble();
-    camera(camPosX, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
+    if (cameraWobbleBool) {
+      cameraWobble();
+    }
+    camera(camPosX, camPosY, camPosZ + cameraPosZ, camPosXGoal, 0, cameraPosZ+150, 0, -1, 0 );
   }
 
 
@@ -273,12 +281,10 @@ class Analysis extends PApplet {
         }
       }
       if (keyCode == RIGHT) {
-        //spectraSpacing += 1;
+        camPosXGoal += 15;
       }
       if (keyCode == LEFT) {
-        if (spectraSpacing > 1) {     
-          //spectraSpacing -= 1;
-        }
+        camPosXGoal -= 15;
       }
       if (keyCode == SHIFT) {
         shift = false;

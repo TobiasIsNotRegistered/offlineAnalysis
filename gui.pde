@@ -14,18 +14,26 @@
  * =========================================================
  */
  
+
+ 
  void fileSelected(File selection) {
   selectedFile = selection;
   songInput.setText(selection.getName());
 }
 
 
+ //from gui
+  boolean cameraWobbleBool = false;
+  boolean linearBool = true;
+  boolean liveBool = true;
+
+
+
 public void startVisualization(GButton source, GEvent event) { //_CODE_:startVisualizationButton:687057:
   println("startVisualizationButton - GButton >> GEvent." + event + " @ " + millis());
   String[] args = {selectedFile.getName(), fftSizeInput.getText()};
-  println(args[0]);
-  println(args[1]);
-  Analysis sa = new Analysis(Integer.parseInt(args[1]));
+
+  Analysis sa = new Analysis(Integer.parseInt(args[1]), linearBool, liveBool, cameraWobbleBool);
   PApplet.runSketch(args, sa);
 } //_CODE_:startVisualizationButton:687057:
 
@@ -41,22 +49,27 @@ public void button1_click1(GButton source, GEvent event) { //_CODE_:button1:3158
 
 public void checkbox1_clicked1(GCheckbox source, GEvent event) { //_CODE_:checkbox1:208046:
   println("checkbox1 - GCheckbox >> GEvent." + event + " @ " + millis());
+  cameraWobbleBool = !cameraWobbleBool;
 } //_CODE_:checkbox1:208046:
 
 public void option1_clicked1(GOption source, GEvent event) { //_CODE_:linear:754631:
   println("linear - GOption >> GEvent." + event + " @ " + millis());
+  linearBool = true;
 } //_CODE_:linear:754631:
 
 public void option2_clicked1(GOption source, GEvent event) { //_CODE_:expo:932156:
   println("expo - GOption >> GEvent." + event + " @ " + millis());
+  liveBool = true;
 } //_CODE_:expo:932156:
 
 public void option1_clicked2(GOption source, GEvent event) { //_CODE_:live:814432:
   println("live - GOption >> GEvent." + event + " @ " + millis());
+  linearBool = false;
 } //_CODE_:live:814432:
 
 public void option2_clicked2(GOption source, GEvent event) { //_CODE_:overview:718778:
   println("overview - GOption >> GEvent." + event + " @ " + millis());
+  liveBool = false;
 } //_CODE_:overview:718778:
 
 
@@ -99,16 +112,16 @@ public void createGUI(){
   label2.setText("+/- : Forward/Backward 5s");
   label2.setOpaque(false);
   label3 = new GLabel(this, 10, 310, 222, 20);
-  label3.setText("q/e : Threshold energy");
+  label3.setText("q/e : Threshold minimum energy");
   label3.setOpaque(false);
   label4 = new GLabel(this, 10, 330, 225, 20);
-  label4.setText("arrow up/down: render with sample");
+  label4.setText("arrow up/down: render every n'th sample");
   label4.setOpaque(false);
   label5 = new GLabel(this, 10, 350, 225, 20);
-  label5.setText("Mousewheel: Rotate x");
+  label5.setText("Mousewheel: Rotate cameraPosX");
   label5.setOpaque(false);
   label6 = new GLabel(this, 10, 370, 227, 20);
-  label6.setText("Shift + Mousewheel: Rotate y");
+  label6.setText("Shift + Mousewheel: Rotate cameraPosY");
   label6.setOpaque(false);
   checkbox1 = new GCheckbox(this, 100, 185, 120, 20);
   checkbox1.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
@@ -117,11 +130,13 @@ public void createGUI(){
   label7 = new GLabel(this, 10, 185, 111, 20);
   label7.setText("Camera Wobble");
   label7.setOpaque(false);
-  label8 = new GLabel(this, 86, 405, 184, 20);
+  label8 = new GLabel(this, 86, 455, 184, 20);
   label8.setTextAlign(GAlign.CENTER, GAlign.MIDDLE);
   label8.setText("Copyright T.Sigel, Y. Sutter");
   label8.setTextItalic();
   label8.setOpaque(false);
+  label9 = new GLabel(this, 10, 390, 227, 20);
+  label9.setText("arrow left/right: move cameraLookAtX");
   linExp = new GToggleGroup();
   linear = new GOption(this, 100, 115, 82, 20);
   linear.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
@@ -170,6 +185,7 @@ GLabel label6;
 GCheckbox checkbox1; 
 GLabel label7; 
 GLabel label8; 
+GLabel label9;
 GToggleGroup linExp; 
 GOption linear; 
 GOption expo; 
