@@ -212,7 +212,7 @@ class Analysis extends PApplet {
       }
     }
 
-    //cameraWobble();
+    cameraWobble();
     camera(camPosX, camPosY, camPosZ + cameraPosZ, 0, 0, cameraPosZ+150, 0, -1, 0 );
   }
 
