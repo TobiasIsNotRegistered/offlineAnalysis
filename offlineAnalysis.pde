@@ -103,14 +103,14 @@ void analyzeUsingAudioRecordingStream(String path)
 
     //copy the resulting spectrum into our spectra array
     //linearCopy: each band is represented
-    //linearCopy(chunkIdx, fft);
+    linearCopy(chunkIdx, fft);
     //exponentialCopy: bands are added together
-    exponentialCopy(chunkIdx, fft);    
+    //exponentialCopy(chunkIdx, fft);    
   }
   amountOfDisplayedBands = fftSize/2;
   //for exponentialCopy
-  spectra = newSpectra;
-  amountOfDisplayedBands = 10;
+  //spectra = newSpectra;
+  //amountOfDisplayedBands = 10;
   println("maxAmplitude: " + maxAmplitude + " | amountOfDisplayedBands: " + amountOfDisplayedBands);
   println("loading complete, playing...");
 }
@@ -153,7 +153,7 @@ void draw()
     //cameraPosZ +=  stepSize;
     cameraPosZ = (player.position() * cameraStep) / 1000;
     background(0, 0.1);  
-    float camNear = cameraPosZ -250;
+    float camNear = cameraPosZ -1000;
     float camFar  = cameraPosZ;
     //float camFadeStart = lerp(camNear, camFar, 0.10f);
 
